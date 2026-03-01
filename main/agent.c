@@ -14,6 +14,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "display.h"
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
@@ -179,6 +180,7 @@ static void send_response(const char *text, int64_t chat_id)
 {
     queue_channel_response(text);
     queue_telegram_response(text, chat_id);
+    display_show_message(text);
 }
 
 static bool is_whitespace_char(char c)
@@ -937,6 +939,7 @@ static void agent_task(void *arg)
 
     while (1) {
         if (xQueueReceive(s_input_queue, &msg, portMAX_DELAY) == pdTRUE) {
+            display_show_message(msg.text);
             process_message(msg.text, response_chat_id_for_source(msg.source, msg.chat_id));
         }
     }

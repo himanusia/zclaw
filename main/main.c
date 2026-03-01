@@ -12,6 +12,7 @@
 #include "nvs_keys.h"
 #include "messages.h"
 #include "wifi_credentials.h"
+#include "display.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -548,6 +549,7 @@ void app_main(void)
     }
 
     // 16. Start agent task
+    display_init();
     startup_err = agent_start(input_queue, channel_output_queue, telegram_output_queue);
     if (startup_err != ESP_OK) {
         fail_fast_startup("agent_start", startup_err);

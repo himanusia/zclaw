@@ -30,6 +30,7 @@ idf_component_register(
         "boot_guard.c"
         "user_tools.c"
         "wifi_credentials.c"
+        "display.c"
     INCLUDE_DIRS "."
     REQUIRES
         nvs_flash
@@ -43,6 +44,8 @@ idf_component_register(
         lwip
         esp_driver_usb_serial_jtag
         app_update
+        u8g2
+        u8g2-hal-esp-idf
 )
 
 set(ZCLAW_VERSION_FILE "${CMAKE_SOURCE_DIR}/VERSION")
