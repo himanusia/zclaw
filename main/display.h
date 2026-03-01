@@ -7,6 +7,6 @@
 esp_err_t display_init(void);
 
 // Queue a message to be shown on screen
-void display_show_message(const char *text);
+void display_show_message(const char *sender, const char *text);
 
 #endif // ZCLAW_DISPLAY_H

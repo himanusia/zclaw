@@ -180,7 +180,7 @@ static void send_response(const char *text, int64_t chat_id)
 {
     queue_channel_response(text);
     queue_telegram_response(text, chat_id);
-    display_show_message(text);
+    display_show_message("zclaw", text);
 }
 
 static bool is_whitespace_char(char c)
@@ -939,7 +939,7 @@ static void agent_task(void *arg)
 
     while (1) {
         if (xQueueReceive(s_input_queue, &msg, portMAX_DELAY) == pdTRUE) {
-            display_show_message(msg.text);
+            display_show_message("User", msg.text);
             process_message(msg.text, response_chat_id_for_source(msg.source, msg.chat_id));
         }
     }

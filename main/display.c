@@ -109,13 +109,17 @@ esp_err_t display_init(void)
     return ESP_OK;
 }
 
-void display_show_message(const char *text)
+void display_show_message(const char *sender, const char *text)
 {
     if (!s_display_queue || !text) return;
 
     display_msg_t msg;
-    strncpy(msg.text, text, DISPLAY_MSG_MAX_LEN - 1);
-    msg.text[DISPLAY_MSG_MAX_LEN - 1] = '\0';
+    if (sender && sender[0] != '\0') {
+        snprintf(msg.text, DISPLAY_MSG_MAX_LEN, "%s: %s", sender, text);
+    } else {
+        strncpy(msg.text, text, DISPLAY_MSG_MAX_LEN - 1);
+        msg.text[DISPLAY_MSG_MAX_LEN - 1] = '\0';
+    }
     
     // Replace newlines with spaces so it prints in one line (since we use DrawStr)
     for (int i = 0; msg.text[i] != '\0'; i++) {
