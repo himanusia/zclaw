@@ -24,6 +24,7 @@ static u8g2_t u8g2;
 #define DISPLAY_MSG_MAX_LEN 128
 
 typedef struct {
+    char sender[32];
     char text[DISPLAY_MSG_MAX_LEN];
 } display_msg_t;
 
@@ -38,19 +39,30 @@ static void display_task(void *arg)
 
     while (1) {
         if (xQueueReceive(s_display_queue, &msg, portMAX_DELAY) == pdTRUE) {
-            ESP_LOGI(TAG, "Displayed message: %s", msg.text);
+            ESP_LOGI(TAG, "Displayed message: [%s] %s", msg.sender, msg.text);
             bool new_msg_received;
             
             do {
                 new_msg_received = false;
                 int text_width = u8g2_GetStrWidth(&u8g2, msg.text);
-                int text_y = Y_OFFSET + 24;
+                
+                int sender_y = Y_OFFSET + 12;
+                int line_y = Y_OFFSET + 16;
+                int text_y = (msg.sender[0] != '\0') ? Y_OFFSET + 28 : Y_OFFSET + 24;
                 
                 for (int x = X_OFFSET + SCREEN_WIDTH; x >= X_OFFSET - text_width; x--) {
                     u8g2_ClearBuffer(&u8g2);
                     u8g2_DrawFrame(&u8g2, X_OFFSET, Y_OFFSET, SCREEN_WIDTH, SCREEN_HEIGHT);
                     
-                    u8g2_SetClipWindow(&u8g2, X_OFFSET+1, Y_OFFSET+1, X_OFFSET+SCREEN_WIDTH-2, Y_OFFSET+SCREEN_HEIGHT-2);
+                    int clip_y_start = Y_OFFSET + 1;
+                    
+                    if (msg.sender[0] != '\0') {
+                        u8g2_DrawStr(&u8g2, X_OFFSET + 4, sender_y, msg.sender);
+                        u8g2_DrawHLine(&u8g2, X_OFFSET, line_y, SCREEN_WIDTH);
+                        clip_y_start = line_y + 1;
+                    }
+                    
+                    u8g2_SetClipWindow(&u8g2, X_OFFSET+1, clip_y_start, X_OFFSET+SCREEN_WIDTH-2, Y_OFFSET+SCREEN_HEIGHT-2);
                     u8g2_DrawStr(&u8g2, x, text_y, msg.text);
                     u8g2_SetMaxClipWindow(&u8g2);
                     
@@ -58,7 +70,7 @@ static void display_task(void *arg)
                     
                     if (xQueueReceive(s_display_queue, &msg, 0) == pdTRUE) {
                         new_msg_received = true;
-                        ESP_LOGI(TAG, "New message received while scrolling: %s", msg.text);
+                        ESP_LOGI(TAG, "New message received while scrolling: [%s] %s", msg.sender, msg.text);
                         break;
                     }
                     
@@ -114,12 +126,13 @@ void display_show_message(const char *sender, const char *text)
     if (!s_display_queue || !text) return;
 
     display_msg_t msg;
+    memset(&msg, 0, sizeof(display_msg_t));
+
     if (sender && sender[0] != '\0') {
-        snprintf(msg.text, DISPLAY_MSG_MAX_LEN, "%s: %s", sender, text);
-    } else {
-        strncpy(msg.text, text, DISPLAY_MSG_MAX_LEN - 1);
-        msg.text[DISPLAY_MSG_MAX_LEN - 1] = '\0';
+        strncpy(msg.sender, sender, sizeof(msg.sender) - 1);
     }
+    
+    strncpy(msg.text, text, sizeof(msg.text) - 1);
     
     // Replace newlines with spaces so it prints in one line (since we use DrawStr)
     for (int i = 0; msg.text[i] != '\0'; i++) {
