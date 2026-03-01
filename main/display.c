@@ -62,7 +62,7 @@ static void display_task(void *arg)
                         break;
                     }
                     
-                    vTaskDelay(pdMS_TO_TICKS(30));
+                    vTaskDelay(pdMS_TO_TICKS(10));
                 }
             } while (new_msg_received);
             
