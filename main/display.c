@@ -38,21 +38,36 @@ static void display_task(void *arg)
 
     while (1) {
         if (xQueueReceive(s_display_queue, &msg, portMAX_DELAY) == pdTRUE) {
+            ESP_LOGI(TAG, "Displayed message: %s", msg.text);
+            bool new_msg_received;
+            
+            do {
+                new_msg_received = false;
+                int text_width = u8g2_GetStrWidth(&u8g2, msg.text);
+                int text_y = Y_OFFSET + 24;
+                
+                for (int x = X_OFFSET + SCREEN_WIDTH; x >= X_OFFSET - text_width; x--) {
+                    u8g2_ClearBuffer(&u8g2);
+                    u8g2_DrawFrame(&u8g2, X_OFFSET, Y_OFFSET, SCREEN_WIDTH, SCREEN_HEIGHT);
+                    
+                    u8g2_DrawStr(&u8g2, x, text_y, msg.text);
+                    
+                    u8g2_SendBuffer(&u8g2);
+                    
+                    if (xQueueReceive(s_display_queue, &msg, 0) == pdTRUE) {
+                        new_msg_received = true;
+                        ESP_LOGI(TAG, "New message received while scrolling: %s", msg.text);
+                        break;
+                    }
+                    
+                    vTaskDelay(pdMS_TO_TICKS(30));
+                }
+            } while (new_msg_received);
+            
+            // Draw empty frame after scrolling finishes
             u8g2_ClearBuffer(&u8g2);
             u8g2_DrawFrame(&u8g2, X_OFFSET, Y_OFFSET, SCREEN_WIDTH, SCREEN_HEIGHT);
-            
-            // Draw text starting inside the frame
-            int8_t text_x = X_OFFSET + 5;
-            int8_t text_y = Y_OFFSET + 15;
-            
-            // Print the message
-            // Note: u8g2_DrawStr doesn't wrap text automatically. 
-            // For a 72x40 display with 8px font, only ~8-10 chars fit per line.
-            // A simple implementation for now: just draw what fits.
-            u8g2_DrawStr(&u8g2, text_x, text_y, msg.text);
-            
             u8g2_SendBuffer(&u8g2);
-            ESP_LOGI(TAG, "Displayed message: %s", msg.text);
         }
     }
 }
