@@ -20,20 +20,20 @@ static u8g2_t u8g2;
 #define PIN_SCL 6
 #define SCREEN_WIDTH 72
 #define SCREEN_HEIGHT 40
-#define X_OFFSET 0  // 72x40 driver might not need the 28 offset anymore
-#define Y_OFFSET 0  // 72x40 driver might not need the 24 offset anymore
+#define X_OFFSET 0
+#define Y_OFFSET 0
 
-#define DISPLAY_QUEUE_LENGTH 2
-#define DISPLAY_MSG_MAX_LEN 128
+#define DISPLAY_QUEUE_LENGTH 3
+#define DISPLAY_MSG_MAX_LEN 1024
 
 typedef struct {
-    char sender[32];
-    char text[DISPLAY_MSG_MAX_LEN];
+    char sender[16];
+    char text[];
 } display_msg_t;
 
 static void display_task(void *arg)
 {
-    display_msg_t msg;
+    display_msg_t *msg = NULL;
     int loading_dots = 0;
     bool was_loading = false;
     
@@ -58,21 +58,21 @@ static void display_task(void *arg)
             last_activity_time = esp_timer_get_time();
             is_idle = false;
             was_loading = false;
-            ESP_LOGI(TAG, "Displayed message: [%s] %s", msg.sender, msg.text);
+            ESP_LOGI(TAG, "Displayed message: [%s] %s", msg->sender, msg->text);
             bool new_msg_received;
             
             do {
                 new_msg_received = false;
-                int text_width = u8g2_GetStrWidth(&u8g2, msg.text);
+                int text_width = u8g2_GetStrWidth(&u8g2, msg->text);
                 
                 int sender_y = Y_OFFSET + 12;
                 int line_y = Y_OFFSET + 16;
-                int text_y = (msg.sender[0] != '\0') ? Y_OFFSET + 28 : Y_OFFSET + 24;
+                int text_y = (msg->sender[0] != '\0') ? Y_OFFSET + 28 : Y_OFFSET + 24;
                 
-                int sender_width = u8g2_GetStrWidth(&u8g2, msg.sender);
+                int sender_width = u8g2_GetStrWidth(&u8g2, msg->sender);
                 int sender_x = X_OFFSET + 4; // default left aligned
                 
-                if (strcmp(msg.sender, "User") == 0) {
+                if (strcmp(msg->sender, "User") == 0) {
                     sender_x = X_OFFSET + SCREEN_WIDTH - 4 - sender_width;
                 }
                 
@@ -82,21 +82,24 @@ static void display_task(void *arg)
                     
                     int clip_y_start = Y_OFFSET + 1;
                     
-                    if (msg.sender[0] != '\0') {
-                        u8g2_DrawStr(&u8g2, sender_x, sender_y, msg.sender);
+                    if (msg->sender[0] != '\0') {
+                        u8g2_DrawStr(&u8g2, sender_x, sender_y, msg->sender);
                         u8g2_DrawHLine(&u8g2, X_OFFSET, line_y, SCREEN_WIDTH);
                         clip_y_start = line_y + 1;
                     }
                     
                     u8g2_SetClipWindow(&u8g2, X_OFFSET+1, clip_y_start, X_OFFSET+SCREEN_WIDTH-2, Y_OFFSET+SCREEN_HEIGHT-2);
-                    u8g2_DrawStr(&u8g2, x, text_y, msg.text);
+                    u8g2_DrawStr(&u8g2, x, text_y, msg->text);
                     u8g2_SetMaxClipWindow(&u8g2);
                     
                     u8g2_SendBuffer(&u8g2);
                     
-                    if (xQueueReceive(s_display_queue, &msg, 0) == pdTRUE) {
+                    display_msg_t *new_msg = NULL;
+                    if (xQueueReceive(s_display_queue, &new_msg, 0) == pdTRUE) {
                         new_msg_received = true;
-                        ESP_LOGI(TAG, "New message received while scrolling: [%s] %s", msg.sender, msg.text);
+                        free(msg);
+                        msg = new_msg;
+                        ESP_LOGI(TAG, "New message received while scrolling: [%s] %s", msg->sender, msg->text);
                         break;
                     }
                     
@@ -104,6 +107,8 @@ static void display_task(void *arg)
                 }
             } while (new_msg_received);
             
+            free(msg);
+            msg = NULL;
             last_activity_time = esp_timer_get_time();
         } else {
             int64_t current_time = esp_timer_get_time();
@@ -191,7 +196,7 @@ esp_err_t display_init(void)
 {
     ESP_LOGI(TAG, "Initializing OLED Display...");
 
-    s_display_queue = xQueueCreate(DISPLAY_QUEUE_LENGTH, sizeof(display_msg_t));
+    s_display_queue = xQueueCreate(DISPLAY_QUEUE_LENGTH, sizeof(display_msg_t *));
     if (!s_display_queue) {
         ESP_LOGE(TAG, "Failed to create display queue");
         return ESP_ERR_NO_MEM;
@@ -226,23 +231,39 @@ void display_show_message(const char *sender, const char *text)
 {
     if (!s_display_queue || !text) return;
 
-    display_msg_t msg;
-    memset(&msg, 0, sizeof(display_msg_t));
+    size_t text_len = strlen(text);
+    if (text_len > DISPLAY_MSG_MAX_LEN) {
+        text_len = DISPLAY_MSG_MAX_LEN;
+    }
+
+    // Dynamically allocate exact memory needed for the message
+    display_msg_t *msg = malloc(sizeof(display_msg_t) + text_len + 1);
+    if (!msg) {
+        ESP_LOGE(TAG, "Failed to allocate memory for display message");
+        return;
+    }
+
+    memset(msg, 0, sizeof(display_msg_t) + text_len + 1);
 
     if (sender && sender[0] != '\0') {
-        strncpy(msg.sender, sender, sizeof(msg.sender) - 1);
+        strncpy(msg->sender, sender, sizeof(msg->sender) - 1);
     }
     
-    strncpy(msg.text, text, sizeof(msg.text) - 1);
+    strncpy(msg->text, text, text_len);
+    msg->text[text_len] = '\0';
     
-    // Replace newlines with spaces so it prints in one line (since we use DrawStr)
-    for (int i = 0; msg.text[i] != '\0'; i++) {
-        if (msg.text[i] == '\n' || msg.text[i] == '\r') {
-            msg.text[i] = ' ';
+    // Replace newlines with spaces so it prints in one line
+    for (int i = 0; msg->text[i] != '\0'; i++) {
+        if (msg->text[i] == '\n' || msg->text[i] == '\r') {
+            msg->text[i] = ' ';
         }
     }
 
-    xQueueSend(s_display_queue, &msg, 0);
+    // Send the POINTER to the queue
+    if (xQueueSend(s_display_queue, &msg, 0) != pdTRUE) {
+        ESP_LOGW(TAG, "Display queue full, dropping message");
+        free(msg);
+    }
 }
 
 void display_set_loading(bool is_loading)
