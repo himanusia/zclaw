@@ -56,7 +56,7 @@ typedef enum {
 
 #define LLM_DEFAULT_MODEL_ANTHROPIC   "claude-sonnet-4-5"
 #define LLM_DEFAULT_MODEL_OPENAI      "gpt-5.2"
-#define LLM_DEFAULT_MODEL_OPENROUTER  "minimax/minimax-m2.5"
+#define LLM_DEFAULT_MODEL_OPENROUTER  "gpt-oss-120b:free"
 #define LLM_DEFAULT_MODEL_OLLAMA      "qwen3:8b"
 
 #define LLM_API_KEY_MAX_LEN       511

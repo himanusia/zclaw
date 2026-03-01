@@ -431,7 +431,7 @@ Edit `main/config.h` to customize:
 ```c
 #define LLM_DEFAULT_MODEL_ANTHROPIC "claude-sonnet-4-5"   // Anthropic default
 #define LLM_DEFAULT_MODEL_OPENAI    "gpt-5.2"             // OpenAI default
-#define LLM_DEFAULT_MODEL_OPENROUTER "minimax/minimax-m2.5" // OpenRouter default
+#define LLM_DEFAULT_MODEL_OPENROUTER "gpt-oss-120b:free" // OpenRouter default
 #define LLM_DEFAULT_MODEL_OLLAMA    "qwen3:8b"            // Ollama default
 #define LLM_MAX_TOKENS 1024                   // Max response tokens
 #define MAX_HISTORY_TURNS 8                   // Conversation history length

@@ -246,7 +246,7 @@ PROVIDERS = {
     "openrouter": ProviderConfig(
         name="openrouter",
         api_url="https://openrouter.ai/api/v1/chat/completions",
-        default_model="minimax/minimax-m2.5",
+        default_model="gpt-oss-120b:free",
         model_env="OPENROUTER_MODEL",
         api_key_env="OPENROUTER_API_KEY",
         wire_format="openai",

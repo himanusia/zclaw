@@ -350,7 +350,7 @@ default_model_for_backend() {
     case "$1" in
         anthropic) echo "claude-sonnet-4-5" ;;
         openai) echo "gpt-5.2" ;;
-        openrouter) echo "minimax/minimax-m2.5" ;;
+        openrouter) echo "gpt-oss-120b:free" ;;
         ollama) echo "qwen3:8b" ;;
         *) echo "claude-sonnet-4-5" ;;
     esac
