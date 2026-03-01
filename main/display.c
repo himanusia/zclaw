@@ -104,10 +104,6 @@ static void display_task(void *arg)
                 }
             } while (new_msg_received);
             
-            // Draw empty frame after scrolling finishes
-            u8g2_ClearBuffer(&u8g2);
-            u8g2_DrawFrame(&u8g2, X_OFFSET, Y_OFFSET, SCREEN_WIDTH, SCREEN_HEIGHT);
-            u8g2_SendBuffer(&u8g2);
             last_activity_time = esp_timer_get_time();
         } else {
             int64_t current_time = esp_timer_get_time();
@@ -139,10 +135,7 @@ static void display_task(void *arg)
                 if (was_loading) {
                     was_loading = false;
                     last_activity_time = current_time;
-                    u8g2_ClearBuffer(&u8g2);
-                    u8g2_DrawFrame(&u8g2, X_OFFSET, Y_OFFSET, SCREEN_WIDTH, SCREEN_HEIGHT);
-                    u8g2_SendBuffer(&u8g2);
-                } else if (current_time - last_activity_time > 5000000LL) { // 5 seconds idle timeout
+                } else if (current_time - last_activity_time > 0LL) { // Immediately enter idle animation
                     bool draw_needed = false;
                     if (!is_idle) {
                         is_idle = true;
