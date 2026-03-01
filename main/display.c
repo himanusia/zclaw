@@ -50,7 +50,9 @@ static void display_task(void *arg)
                     u8g2_ClearBuffer(&u8g2);
                     u8g2_DrawFrame(&u8g2, X_OFFSET, Y_OFFSET, SCREEN_WIDTH, SCREEN_HEIGHT);
                     
+                    u8g2_SetClipWindow(&u8g2, X_OFFSET+1, Y_OFFSET+1, X_OFFSET+SCREEN_WIDTH-2, Y_OFFSET+SCREEN_HEIGHT-2);
                     u8g2_DrawStr(&u8g2, x, text_y, msg.text);
+                    u8g2_SetMaxClipWindow(&u8g2);
                     
                     u8g2_SendBuffer(&u8g2);
                     
