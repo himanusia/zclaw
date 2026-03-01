@@ -940,7 +940,9 @@ static void agent_task(void *arg)
     while (1) {
         if (xQueueReceive(s_input_queue, &msg, portMAX_DELAY) == pdTRUE) {
             display_show_message("User", msg.text);
+            display_set_loading(true);
             process_message(msg.text, response_chat_id_for_source(msg.source, msg.chat_id));
+            display_set_loading(false);
         }
     }
 }
